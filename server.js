@@ -1,18 +1,23 @@
-//mongodb
+// mongodb
 require('./config/db');
 
-
-const app = require('express')();
-const port = process.env.PORT || 3000;
-
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('express').json;
 const UserRouter = require('./api/user');
 
-//for accepting post form data
-const bodyParser = require('express').json;
+const app = express();
+const port = process.env.PORT || 3000;
+
+// CORS Middleware
+app.use(cors());
+
+// Body Parser Middleware
 app.use(bodyParser());
 
-app.use('/user',UserRouter)
+// Routes
+app.use('/user', UserRouter);
 
-app.listen(port, ()=> {
+app.listen(port, () => {
     console.log(`Server running on port ${port}`);
-})
+});
