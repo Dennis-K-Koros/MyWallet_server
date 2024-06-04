@@ -7,8 +7,11 @@ const User = require('./../models/user');
 //mongodb user verification model
 const UserVerification = require('./../models/UserVerification');
 
-//mongodb user verification model
+//mongodb user Password reset model
 const PasswordReset = require('./../models/PasswordReset');
+
+//mongodb user OTP verification model
+const UserOTPVerification = require('./../models/UserOTPverification');
 
 //email handler
 const nodemailer = require("nodemailer");
@@ -137,6 +140,8 @@ router.post('/signup', (req,res) =>{
    }
 
 });
+
+//send otp verification email
 
 //send verification email
 const sendVerificationEmail = ({_id, email}, res) => {
