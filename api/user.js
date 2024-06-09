@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router();
 
 //mongodb user model
-const User = require('./../models/user');
+const User = require('../models/user/user');
 
 //mongodb user verification model
-const UserVerification = require('./../models/UserVerification');
+const UserVerification = require('../models/user/UserVerification');
 
 //mongodb user Password reset model
-const PasswordReset = require('./../models/PasswordReset');
+const PasswordReset = require('../models/user/PasswordReset');
 
 //mongodb user OTP verification model
-const UserOTPVerification = require('./../models/UserOTPverification');
+const UserOTPVerification = require('../models/user/UserOTPverification');
 
 //email handler
 const nodemailer = require("nodemailer");
