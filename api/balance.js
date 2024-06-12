@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-//mongodb expense model
-const Expense = require('../models/expense/expense');
+//mongodb Balance model
+const Balance = require('../models/balance/balance');
 
 // Middleware to parse JSON bodies
 router.use(express.json());
@@ -11,7 +11,7 @@ router.use(express.json());
 //env variables
 require("dotenv").config();
 
-// Creating Expense Record
+// Creating Balance Record
 router.post('/create',(req,res)=>{
    let {amount, category, userId} = req.body;
    amount = amount.trim();
@@ -29,78 +29,78 @@ router.post('/create',(req,res)=>{
         });
     }else{
 
-        const newExpense = new Expense({
+        const newBalance = new Balance({
             userId: new mongoose.Types.ObjectId(userId),
             amount: parseInt(amount, 10), // Ensure amount is stored as a number
             category: category,
             createdAt: new Date()
         });
 
-        newExpense
+        newBalance
         .save()
         .then(result => {
             res.json({
                 status: "SUCCESS",
-                message: "expense record created successfully",
+                message: "Balance record created successfully",
                 data: result
             });
         })
         .catch(error =>{
             res.json({
                 status: "FAILED",
-                message: "An error occurred while creating new Expense record"
+                message: "An error occurred while creating new Balance record"
             }); 
         })
     }
         
 })
 
-// Reading all Expense Records
+// Reading all Balance Records
 router.get('/', (req, res) => {
-    Expense.find()
-        .then(expenses => {
+    Balance.find()
+        .then(balances => {
             res.json({
                 status: "SUCCESS",
-                data: expenses
+                data: balances
             });
         })
         .catch(error => {
             res.json({
                 status: "FAILED",
-                message: "An error occurred while retrieving expense records",
+                message: "An error occurred while retrieving balance records",
             });
         });
 });
 
 
-// Reading a specific Expense Record by ID
+// Reading a specific Balance Record by ID
 router.get('/:id', (req, res) => {
     const { id } = req.params;
 
-    Expense.findById(id)
-        .then(expense => {
-            //check if expense id exists
-            if (!expense) {
+    Balance.findById(id)
+        .then(balance => {
+            //check if balance id exists
+            if (!balance) {
                 return res.json({
                     status: "FAILED",
-                    message: "Expense record not found"
+                    message: "Balance record not found"
                 });
             }else {
                 res.json({
                     status: "SUCCESS",
-                    data: expense
+                    data: balance
                 });
             } 
         })
         .catch(error => {
             res.json({
                 status: "FAILED",
-                message: "An error occurred while retrieving the expense record",
+                message: "An error occurred while retrieving the balance record",
             });
         });
 });
 
-// Reading all expense Records for a user and within a specific period
+// Reading all balance Records for a user and within a specific period
 router.get('/user', (req, res) => {
     const { userId, startDate, endDate } = req.query;
     if (!userId) {
@@ -125,23 +125,23 @@ router.get('/user', (req, res) => {
         filter.createdAt.$lte = new Date(endDate);
     }
     
-    Expense.find(filter)
-        .then(expenses => {
+    Balance.find(filter)
+        .then(balances => {
             res.json({
                 status: "SUCCESS",
-                data: expenses
+                data: balances
             });
         })
         .catch(error => {
             res.json({
                 status: "FAILED",
-                message: "An error occurred while retrieving expense records",
+                message: "An error occurred while retrieving balance records",
                 error: error.message
             });
         });
 });
 
-// Updating an Expense Record by ID
+// Updating an Balance Record by ID
 router.put('/update/:id', (req, res) => {
     const { id } = req.params;
     const { userId, category, amount } = req.body;
@@ -160,51 +160,51 @@ router.put('/update/:id', (req, res) => {
         });
     }
 
-    Expense.findByIdAndUpdate(id, { amount: parseInt(amount, 10), category: category, userId:new mongoose.Types.ObjectId(userId) }, { new: true })
-        .then(updatedExpense => {
-            if (!updatedExpense) {
+    Balance.findByIdAndUpdate(id, { amount: parseInt(amount, 10), category: category, userId:new mongoose.Types.ObjectId(userId) }, { new: true })
+        .then(updatedBalance => {
+            if (!updatedBalance) {
                 return res.json({
                     status: "FAILED",
-                    message: "Expense record not found"
+                    message: "Balance record not found"
                 });
             }
             res.json({
                 status: "SUCCESS",
-                message: "Expense record updated successfully",
-                data: updatedExpense
+                message: "Balance record updated successfully",
+                data: updatedBalance
             });
         })
         .catch(error => {
             res.json({
                 status: "FAILED",
-                message: "An error occurred while updating the Expense record",
+                message: "An error occurred while updating the Balance record",
             });
         });
 });
 
 
-// Deleting an Expense Record by ID
+// Deleting an Balance Record by ID
 router.delete('/delete/:id', (req, res) => {
     const { id } = req.params;
 
-    Expense.findByIdAndDelete(id)
-        .then(deletedExpense => {
-            if (!deletedExpense) {
+    Balance.findByIdAndDelete(id)
+        .then(deletedBalance => {
+            if (!deletedBalance) {
                 return res.json({
                     status: "FAILED",
-                    message: "Expense record not found"
+                    message: "Balance record not found"
                 });
             }
             res.json({
                 status: "SUCCESS",
-                message: "Expense record deleted successfully",
-                data: deletedExpense
+                message: "Balance record deleted successfully",
+                data: deletedBalance
             });
         })
         .catch(error => {
             res.json({
                 status: "FAILED",
-                message: "An error occurred while deleting the Expense record",
+                message: "An error occurred while deleting the Balance record",
                 error: error.message
             });
         });

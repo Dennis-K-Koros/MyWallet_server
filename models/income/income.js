@@ -1,9 +1,13 @@
-const { Int32 } = require('mongodb');
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const IncomeSchema = new Schema({
-    amount: Int32,
+    // Add userID field
+    userId: { type: Schema.Types.ObjectId, ref: 'User' }, 
+    amount: {
+        type: Number,
+        required: true
+    },
     category: String,
     createdAt: Date,
 });
