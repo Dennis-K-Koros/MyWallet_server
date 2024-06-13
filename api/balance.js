@@ -55,91 +55,32 @@ router.post('/create',(req,res)=>{
         
 })
 
-// Reading all Balance Records
-router.get('/', (req, res) => {
-    Balance.find()
-        .then(balances => {
-            res.json({
-                status: "SUCCESS",
-                data: balances
-            });
-        })
-        .catch(error => {
-            res.json({
-                status: "FAILED",
-                message: "An error occurred while retrieving balance records",
-            });
-        });
-});
+// Reading user Balance records by userId
+router.get('/:userId', (req, res) => {
+    const userId = req.params.userId;
 
-
-// Reading a specific Balance Record by ID
-router.get('/:id', (req, res) => {
-    const { id } = req.params;
-
-    Balance.findById(id)
+    Balance.findOne({ userId: userId })
         .then(balance => {
-            //check if balance id exists
-            if (!balance) {
-                return res.json({
-                    status: "FAILED",
-                    message: "Balance record not found"
-                });
-            }else {
+            if (balance) {
                 res.json({
                     status: "SUCCESS",
                     data: balance
                 });
-            } 
-        })
-        .catch(error => {
-            res.json({
-                status: "FAILED",
-                message: "An error occurred while retrieving the balance record",
-            });
-        });
-});
-
-// Reading all balance Records for a user and within a specific period
-router.get('/user', (req, res) => {
-    const { userId, startDate, endDate } = req.query;
-    if (!userId) {
-        return res.json({
-            status: "FAILED",
-            message: "UserID is required"
-        });
-    }
-
-    const filter = {
-        userId: mongoose.Types.ObjectId(userId)
-    };
-
-    if (startDate) {
-        filter.createdAt = { $gte: new Date(startDate) };
-    }
-
-    if (endDate) {
-        if (!filter.createdAt) {
-            filter.createdAt = {};
-        }
-        filter.createdAt.$lte = new Date(endDate);
-    }
-    
-    Balance.find(filter)
-        .then(balances => {
-            res.json({
-                status: "SUCCESS",
-                data: balances
-            });
+            } else {
+                res.json({
+                    status: "FAILED",
+                    message: "No balance record found for this user",
+                });
+            }
         })
         .catch(error => {
             res.json({
                 status: "FAILED",
                 message: "An error occurred while retrieving balance records",
-                error: error.message
             });
         });
 });
+
 
 // Updating an Balance Record by ID
 router.put('/update/:id', (req, res) => {
