@@ -13,9 +13,8 @@ require("dotenv").config();
 
 // Creating Balance Record
 router.post('/create',(req,res)=>{
-   let {amount, category, userId} = req.body;
+   let {amount, userId} = req.body;
    amount = amount.trim();
-   category = category.trim();
    
    if(amount == "" || !userId){
         res.json({
@@ -32,7 +31,6 @@ router.post('/create',(req,res)=>{
         const newBalance = new Balance({
             userId: new mongoose.Types.ObjectId(userId),
             amount: parseInt(amount, 10), // Ensure amount is stored as a number
-            category: category,
             createdAt: new Date()
         });
 
@@ -85,9 +83,9 @@ router.get('/:userId', (req, res) => {
 // Updating an Balance Record by ID
 router.put('/update/:id', (req, res) => {
     const { id } = req.params;
-    const { userId, category, amount } = req.body;
+    const { userId, amount } = req.body;
 
-    if (!amount || !category || !userId) {
+    if (!amount || !userId) {
         return res.json({
             status: "FAILED",
             message: "Empty input fields!"
@@ -101,7 +99,7 @@ router.put('/update/:id', (req, res) => {
         });
     }
 
-    Balance.findByIdAndUpdate(id, { amount: parseInt(amount, 10), category: category, userId:new mongoose.Types.ObjectId(userId) }, { new: true })
+    Balance.findByIdAndUpdate(id, { amount: parseInt(amount, 10), userId:new mongoose.Types.ObjectId(userId) }, { new: true })
         .then(updatedBalance => {
             if (!updatedBalance) {
                 return res.json({
