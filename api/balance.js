@@ -13,15 +13,15 @@ require("dotenv").config();
 
 // Creating Balance Record
 router.post('/create',(req,res)=>{
-   let {amount, userId} = req.body;
-   amount = amount.trim();
+   let {userId, balance} = req.body;
+   balance = balance.trim();
    
-   if(amount == "" || !userId){
+   if(balance == "" || !userId){
         res.json({
             status: "FAILED",
             message: "Empty input fields!"
         });
-    }else if(!/^\d+$/.test(amount)){
+    }else if(!/^\d+$/.test(balance)){
         res.json({
             status: "FAILED",
             message: "Only numbers are accepted"
@@ -30,7 +30,7 @@ router.post('/create',(req,res)=>{
 
         const newBalance = new Balance({
             userId: new mongoose.Types.ObjectId(userId),
-            amount: parseInt(amount, 10), // Ensure amount is stored as a number
+            balance: parseInt(balance, 10), // Ensure balance is stored as a number
             createdAt: new Date()
         });
 
@@ -83,23 +83,23 @@ router.get('/:userId', (req, res) => {
 // Updating an Balance Record by ID
 router.put('/update/:id', (req, res) => {
     const { id } = req.params;
-    const { userId, amount } = req.body;
+    const { userId, balance } = req.body;
 
-    if (!amount || !userId) {
+    if (!balance || !userId) {
         return res.json({
             status: "FAILED",
             message: "Empty input fields!"
         });
     }
 
-    if (!/^\d+$/.test(amount)) {
+    if (!/^\d+$/.test(balance)) {
         return res.json({
             status: "FAILED",
-            message: "Only numbers are accepted for the amount"
+            message: "Only numbers are accepted for the balance"
         });
     }
 
-    Balance.findByIdAndUpdate(id, { amount: parseInt(amount, 10), userId:new mongoose.Types.ObjectId(userId) }, { new: true })
+    Balance.findByIdAndUpdate(id, { balance: parseInt(balance, 10), userId:new mongoose.Types.ObjectId(userId) }, { new: true })
         .then(updatedBalance => {
             if (!updatedBalance) {
                 return res.json({

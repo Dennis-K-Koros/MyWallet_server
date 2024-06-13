@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const BalanceSchema = new Schema({
     // Add userID field
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
-    amount: {
+    balance: {
         type: Number,
         required: true
     },
