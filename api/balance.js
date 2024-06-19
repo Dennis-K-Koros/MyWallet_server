@@ -2,81 +2,75 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-//mongodb Balance model
+// MongoDB Balance model
 const Balance = require('../models/balance/balance');
 
 // Middleware to parse JSON bodies
 router.use(express.json());
 
-//env variables
-require("dotenv").config();
-
 // Creating Balance Record
-router.post('/create',(req,res)=>{
-   let {userId, balance} = req.body;
-   balance = balance.trim();
-   
-   if(balance == "" || !userId){
-        res.json({
-            status: "FAILED",
-            message: "Empty input fields!"
-        });
-    }else if(!/^\d+$/.test(balance)){
-        res.json({
-            status: "FAILED",
-            message: "Only numbers are accepted"
-        });
-    }else{
+router.post('/create', (req, res) => {
+  let { userId, balance } = req.body;
+  balance = balance.trim();
 
-        const newBalance = new Balance({
-            userId: new mongoose.Types.ObjectId(userId),
-            balance: parseInt(balance, 10), // Ensure balance is stored as a number
-            createdAt: new Date()
-        });
+  if (balance === "" || !userId) {
+    return res.json({
+      status: "FAILED",
+      message: "Empty input fields!"
+    });
+  } else if (!/^\d+$/.test(balance)) {
+    return res.json({
+      status: "FAILED",
+      message: "Only numbers are accepted"
+    });
+  } else {
+    const newBalance = new Balance({
+      userId: new mongoose.Types.ObjectId(userId),
+      balance: parseInt(balance, 10), // Ensure balance is stored as a number
+      createdAt: new Date()
+    });
 
-        newBalance
-        .save()
-        .then(result => {
-            res.json({
-                status: "SUCCESS",
-                message: "Balance record created successfully",
-                data: result
-            });
-        })
-        .catch(error =>{
-            res.json({
-                status: "FAILED",
-                message: "An error occurred while creating new Balance record"
-            }); 
-        })
-    }
-        
-})
+    newBalance.save()
+      .then(result => {
+        res.json({
+          status: "SUCCESS",
+          message: "Balance record created successfully",
+          data: result
+        });
+      })
+      .catch(error => {
+        res.json({
+          status: "FAILED",
+          message: "An error occurred while creating new Balance record"
+        });
+      });
+  }
+});
 
 // Reading user Balance records by userId
 router.get('/:userId', (req, res) => {
-    const userId = req.params.userId;
+  const userId = req.params.userId;
 
-    Balance.findOne({ userId: userId })
-        .then(balance => {
-            if (balance) {
-                res.json({
-                    status: "SUCCESS",
-                    data: balance
-                });
-            } else {
-                res.json({
-                    status: "FAILED",
-                    message: "No balance record found for this user",
-                });
-            }
-        })
-        .catch(error => {
-            res.json({
-                status: "FAILED",
-                message: "An error occurred while retrieving balance records",
-            });
+  Balance.findOne({ userId: userId })
+    .then(balance => {
+      if (balance) {
+        res.json({
+          status: "SUCCESS",
+          data: balance
         });
+      } else {
+        res.json({
+          status: "FAILED",
+          message: "No balance record found for this user",
+        });
+      }
+    })
+    .catch(error => {
+      res.json({
+        status: "FAILED",
+        message: "An error occurred while retrieving balance records",
+      });
+    });
 });
 
 
