@@ -112,7 +112,8 @@ router.post('/signup', (req,res) =>{
                     .save()
                     .then(result =>{
                         //handle account verification
-                        sendVerificationEmail (result,res);
+                        // sendVerificationEmail (result,res);
+                        sendOTPVerificationEmail(result,res);
                     })
                     .catch(err =>{
                         res.json({
@@ -142,6 +143,118 @@ router.post('/signup', (req,res) =>{
 });
 
 //send otp verification email
+const sendOTPVerificationEmail = async ({_id, email}, res)=>{
+    try {
+        const otp  = `${Math.floor(1000 + Math.random()*9000)}`;
+
+        // mail options
+        const mailOptions ={
+            from: process.env.AUTH_EMAIL,
+            to: email,
+            subject: "Verify Your Email",
+            html : `<p> Enter <b>${otp}</b> in the app to verify your email address and complete the signup process. </p><p> This code <b>expires in 1 hour</b>.<p> `
+        };
+
+        // hash the otp
+        const saltRounds = 10;
+   
+        const hashedOTP = await bcrypt.hash(otp, saltRounds);
+        const newOTPVerification = await new UserOTPVerification({
+            userId: _id,
+            otp: hashedOTP,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 3600000,
+        });
+
+        //save otp record
+        await newOTPVerification.save();
+        await transporter.sendMail(mailOptions);
+        res.json({
+            status: "PENDING",
+            message: "Verification otp email sent",
+            data:{
+                userId: _id,
+                email,
+            }
+        })
+
+    } catch (error) {
+        res.json({
+            status:"FAILED",
+            message: "Verification email failed to send",
+        })
+    } 
+};
+
+//Verify otp email
+router.post("/verifyOTP", async (req, res) =>{
+    try {
+        let { userId, otp} = req.body;
+        if(!userId || !otp){
+            throw Error("Empty otp details are not allowed");
+        }else{
+            const UserOTPVerificationRecords = await UserOTPVerification.find({
+               userId,
+            });
+            if(UserOTPVerificationRecords.length <= 0){
+                //no record found
+                throw new Error(
+                   "Account record doesnt exist or has been verified already. Please sign up or log in." 
+                );
+            }else{
+                //user otp record exists
+                const {expiresAt} = UserOTPVerificationRecords[0];
+                const hashedOTP = UserOTPVerificationRecords[0].otp;
+
+                if(expiresAt < Date.now()){
+                    //user otp record has expired
+                    await UserOTPVerification.deleteMany({ userId});
+                    throw new Error("Code has expired. Please Request again");
+                }else{
+                    const validOTP = await bcrypt.compare(otp, hashedOTP);
+
+                    if(!validOTP){
+                        //supplied otp is wrong
+                        throw new Error("Invalid code passed. Check your Inbox");   
+                    }else{
+                        //success
+                        await User.updateOne({_id: userId},{ verified: true});
+                        await UserOTPVerification.deleteMany({ userId});
+                        res.json({
+                            status: "VERIFIED",
+                            message: "User email verified successfully.",
+                        });
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        res.json({
+            status: "FAILED",
+            message: error.message,
+        });
+    }
+});
+
+//resend otp verification email
+router.post("/resendOTPVerificationCode", async (req,res) =>{
+    try {
+        let { userId, email} = req.body;
+    
+        if(!userId || !email){
+            throw Error("Empty user details are not allowed");
+        }else{
+            //delete existing records and resend
+            await UserOTPVerification.deleteMany({userId});
+            sendOTPVerificationEmail({_id: userId, email}, res);
+        }
+       } catch (error) {
+            res.json({
+                status: "FAILED",
+                message: `Verification OTP Resend Error. ${error.message}`,
+            });
+       }
+});
 
 //send verification email
 const sendVerificationEmail = ({_id, email}, res) => {
@@ -188,7 +301,7 @@ const sendVerificationEmail = ({_id, email}, res) => {
                         console.log(error);
                         res.json({
                             status: "FAILED",
-                            message: "Verification email failed to send",
+                            message: error.message,
                         }); 
                     })
                 })
