@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 
 //mongodb expense model
 const Expense = require('../models/expense/expense');
+const Balance = require('../models/balance/balance');
 
 // Middleware to parse JSON bodies
 router.use(express.json());
@@ -12,48 +13,70 @@ router.use(express.json());
 require("dotenv").config();
 
 // Creating Expense Record
-router.post('/create',(req,res)=>{
-   let {amount, category, userId} = req.body;
-   amount = amount.trim();
-   category = category.trim();
-   
-   if(amount == "" || !userId){
-        res.json({
+router.post('/create', async (req, res) => {
+    let { amount, category, userId } = req.body;
+    amount = amount.trim();
+    category = category.trim();
+
+    if (amount == "" || !userId) {
+        return res.json({
             status: "FAILED",
             message: "Empty input fields!"
         });
-    }else if(!/^\d+$/.test(amount)){
-        res.json({
+    } else if (!/^\d+$/.test(amount)) {
+        return res.json({
             status: "FAILED",
             message: "Only numbers are accepted"
         });
-    }else{
+    }
 
+    try {
         const newExpense = new Expense({
             userId: new mongoose.Types.ObjectId(userId),
-            amount: parseInt(amount, 10), // Ensure amount is stored as a number
+            amount: parseInt(amount, 10),
             category: category,
             createdAt: new Date()
         });
 
-        newExpense
-        .save()
-        .then(result => {
-            res.json({
-                status: "SUCCESS",
-                message: "expense record created successfully",
-                data: result
-            });
-        })
-        .catch(error =>{
-            res.json({
-                status: "FAILED",
-                message: "An error occurred while creating new Expense record"
-            }); 
-        })
+        const savedExpense = await newExpense.save();
+
+        // Update user's balance
+        await updateBalance(userId, -parseInt(amount, 10));
+
+        res.json({
+            status: "SUCCESS",
+            message: "Expense record created successfully",
+            data: savedExpense
+        });
+    } catch (error) {
+        res.json({
+            status: "FAILED",
+            message: "An error occurred while creating new Expense record"
+        });
     }
-        
-})
+});
+
+// Helper function to update balance
+async function updateBalance(userId, amount) {
+    try {
+        const balance = await Balance.findOne({ userId: userId });
+
+        if (balance) {
+            balance.balance += amount;
+            await balance.save();
+        } else {
+            // If balance record doesn't exist, create a new one
+            const newBalance = new Balance({
+                userId: userId,
+                balance: amount,
+                createdAt: new Date()
+            });
+            await newBalance.save();
+        }
+    } catch (error) {
+        throw new Error("Error updating balance: " + error.message);
+    }
+}
 
 // Reading all Expense Records
 router.get('/', (req, res) => {
@@ -141,8 +164,82 @@ router.get('/user', (req, res) => {
         });
 });
 
+// Route to get expense records for a specific period (day, week, month, year)
+router.get('/period/:period', async (req, res) => {
+    const { userId } = req.query;
+    const { period } = req.params;
+
+    if (!userId) {
+        return res.json({
+            status: "FAILED",
+            message: "UserID is required"
+        });
+    }
+
+    const filter = {
+        userId: new mongoose.Types.ObjectId(userId),
+    };
+
+    let startDate = new Date();
+    let endDate = new Date();
+
+    switch (period) {
+        case 'day':
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'week':
+            const currentDay = startDate.getDay();
+            const distanceToMonday = (currentDay + 6) % 7; // Days to Monday (0 for Monday)
+            startDate.setDate(startDate.getDate() - distanceToMonday);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'month':
+            startDate.setDate(1);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setMonth(startDate.getMonth() + 1);
+            endDate.setDate(0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'year':
+            startDate.setMonth(0, 1);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setFullYear(startDate.getFullYear() + 1);
+            endDate.setMonth(0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        default:
+            return res.json({
+                status: "FAILED",
+                message: "Invalid period specified"
+            });
+    }
+
+    filter.createdAt = { $gte: startDate, $lte: endDate };
+
+    try {
+        const expenses = await Expense.find(filter);
+        res.json({
+            status: "SUCCESS",
+            data: expenses
+        });
+    } catch (error) {
+        res.json({
+            status: "FAILED",
+            message: "An error occurred while retrieving expense records",
+            error: error.message
+        });
+    }
+});
+
+
 // Updating an Expense Record by ID
-router.put('/update/:id', (req, res) => {
+router.put('/update/:id', async (req, res) => {
     const { id } = req.params;
     const { userId, category, amount } = req.body;
 
@@ -160,27 +257,41 @@ router.put('/update/:id', (req, res) => {
         });
     }
 
-    Expense.findByIdAndUpdate(id, { amount: parseInt(amount, 10), category: category, userId:new mongoose.Types.ObjectId(userId) }, { new: true })
-        .then(updatedExpense => {
-            if (!updatedExpense) {
-                return res.json({
-                    status: "FAILED",
-                    message: "Expense record not found"
-                });
-            }
-            res.json({
-                status: "SUCCESS",
-                message: "Expense record updated successfully",
-                data: updatedExpense
-            });
-        })
-        .catch(error => {
-            res.json({
+    try {
+        const expense = await Expense.findById(id);
+        if (!expense) {
+            return res.json({
                 status: "FAILED",
-                message: "An error occurred while updating the Expense record",
+                message: "Expense record not found"
             });
+        }
+
+        const oldAmount = expense.amount;
+        const difference = parseInt(amount, 10) - oldAmount;
+
+        // Update the expense record
+        const updatedExpense = await Expense.findByIdAndUpdate(id, {
+            amount: parseInt(amount, 10),
+            category: category,
+            userId: new mongoose.Types.ObjectId(userId)
+        }, { new: true });
+
+        // Update user's balance
+        await updateBalance(userId, -difference);
+
+        res.json({
+            status: "SUCCESS",
+            message: "Expense record updated successfully",
+            data: updatedExpense
         });
+    } catch (error) {
+        res.json({
+            status: "FAILED",
+            message: "An error occurred while updating the expense record"
+        });
+    }
 });
+
 
 
 // Deleting an Expense Record by ID
