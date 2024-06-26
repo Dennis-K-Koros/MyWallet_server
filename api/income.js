@@ -185,7 +185,7 @@ router.get('/period/:period', async (req, res) => {
     let startDate = new Date();
     let endDate = new Date();
 
-    switch (period) {
+    switch (period.toLowerCase()) {
         case 'day':
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(23, 59, 59, 999);
@@ -226,9 +226,11 @@ router.get('/period/:period', async (req, res) => {
 
     try {
         const incomes = await Income.find(filter);
+        const totalAmount = incomes.reduce((sum, income) => sum + income.amount, 0); // Assuming each income record has an 'amount' field
         res.json({
             status: "SUCCESS",
-            data: incomes
+            data: incomes,
+            totalAmount
         });
     } catch (error) {
         res.json({
