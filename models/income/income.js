@@ -10,6 +10,7 @@ const IncomeSchema = new Schema({
     },
     category: String,
     createdAt: Date,
+    note: String,
 });
 
 const Income = mongoose.model('Income', IncomeSchema);

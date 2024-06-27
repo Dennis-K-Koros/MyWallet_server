@@ -14,11 +14,12 @@ require("dotenv").config();
 
 // Creating Expense Record
 router.post('/create', async (req, res) => {
-    let { amount, category, userId } = req.body;
+    let { amount, category, userId, note } = req.body;
     amount = amount.trim();
     category = category.trim();
+    note = note.trim();
 
-    if (amount == "" || !userId) {
+    if (amount == "" || !userId || category == "") {
         return res.json({
             status: "FAILED",
             message: "Empty input fields!"

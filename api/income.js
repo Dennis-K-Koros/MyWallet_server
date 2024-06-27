@@ -14,11 +14,12 @@ require("dotenv").config();
 
 // Creating Income Record
 router.post('/create', async (req, res) => {
-    let { amount, category, userId } = req.body;
+    let { amount, category, userId, note } = req.body;
     amount = amount.trim();
     category = category.trim();
+    note = note.trim();
 
-    if (amount == "" || !userId) {
+    if (amount == "" || !userId || category == "") {
         return res.json({
             status: "FAILED",
             message: "Empty input fields!"
@@ -35,6 +36,7 @@ router.post('/create', async (req, res) => {
             userId: new mongoose.Types.ObjectId(userId),
             amount: parseInt(amount, 10),
             category: category,
+            note: note,
             createdAt: new Date()
         });
 
@@ -245,9 +247,9 @@ router.get('/period/:period', async (req, res) => {
 // Updating an Income Record by ID
 router.put('/update/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId, category, amount } = req.body;
+    const { userId, category, amount, note } = req.body;
 
-    if (!amount || !category || !userId) {
+    if (!amount || !category || !userId ) {
         return res.json({
             status: "FAILED",
             message: "Empty input fields!"

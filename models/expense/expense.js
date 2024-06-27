@@ -10,6 +10,7 @@ const ExpenseSchema = new Schema({
     },
     category: String,
     createdAt: Date,
+    note: String,
 });
 
 const Expense = mongoose.model('Expense', ExpenseSchema);
