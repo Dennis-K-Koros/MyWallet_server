@@ -27,7 +27,8 @@ router.post('/create', (req, res) => {
     const newBalance = new Balance({
       userId: new mongoose.Types.ObjectId(userId),
       balance: parseInt(balance, 10), // Ensure balance is stored as a number
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     newBalance.save()

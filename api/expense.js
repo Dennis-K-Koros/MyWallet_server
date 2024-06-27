@@ -14,12 +14,19 @@ require("dotenv").config();
 
 // Creating Expense Record
 router.post('/create', async (req, res) => {
-    let { amount, category, userId, note } = req.body;
+    let { amount, category, userId, paymentMethod, date, note } = req.body;
     amount = amount.trim();
     category = category.trim();
-    note = note.trim();
+    paymentMethod = paymentMethod.trim();
+    date = date.trim();
+    // Assuming this is where you're handling the note variable
+    if (note) {
+        note = note.trim();
+    } else {
+        note = ''; // or null or whatever is appropriate
+   }
 
-    if (amount == "" || !userId || category == "") {
+    if (amount == "" || !userId || category == "" || paymentMethod == "" || date == "") {
         return res.json({
             status: "FAILED",
             message: "Empty input fields!"
@@ -29,6 +36,11 @@ router.post('/create', async (req, res) => {
             status: "FAILED",
             message: "Only numbers are accepted"
         });
+    }else if(isNaN(new Date(date).getTime())){
+        res.json({
+            status: "FAILED",
+            message: "Invalid date entered"
+        });
     }
 
     try {
@@ -36,6 +48,9 @@ router.post('/create', async (req, res) => {
             userId: new mongoose.Types.ObjectId(userId),
             amount: parseInt(amount, 10),
             category: category,
+            paymentMethod: paymentMethod,
+            date: date,
+            note: note,
             createdAt: new Date()
         });
 
@@ -64,6 +79,7 @@ async function updateBalance(userId, amount) {
 
         if (balance) {
             balance.balance += amount;
+            balance.updatedAt = new Date();
             await balance.save();
         } else {
             // If balance record doesn't exist, create a new one

@@ -9,6 +9,8 @@ const ExpenseSchema = new Schema({
         required: true
     },
     category: String,
+    paymentMethod: String,
+    date: Date,
     createdAt: Date,
     note: String,
 });
