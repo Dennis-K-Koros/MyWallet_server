@@ -5,8 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('express').json;
 const UserRouter = require('./api/user');
-const IncomeRouter = require('./api/income');
-const ExpenseRouter = require('./api/expense');
+const TransactionRouter = require('./api/transaction');
 const BalanceRouter = require('./api/balance');
 
 const app = express();
@@ -20,8 +19,7 @@ app.use(bodyParser());
 
 // Routes
 app.use('/user', UserRouter);
-app.use('/income', IncomeRouter);
-app.use('/expense', ExpenseRouter);
+app.use('/transaction', TransactionRouter);
 app.use('/balance', BalanceRouter);
 
 app.listen(port, () => {

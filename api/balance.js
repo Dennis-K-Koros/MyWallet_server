@@ -3,7 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 
 // MongoDB Balance model
-const Balance = require('../models/balance/balance');
+const Balance = require('../models/balance');
 
 // Middleware to parse JSON bodies
 router.use(express.json());
