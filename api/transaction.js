@@ -193,9 +193,16 @@ router.get('/user', (req, res) => {
         });
 });
 
-// Route to get transaction records for a specific period (day, week, month, year)
+// Helper function to convert month names to month numbers
+const getMonthNumber = (month) => {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthIndex = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
+    return monthIndex >= 0 ? monthIndex : null;
+};
+
+// Route to get total amounts within a specific period (day, week, month, year)
 router.get('/period/:period', async (req, res) => {
-    const { userId, type = 'all' } = req.query; // Default to 'all' if type is not specified
+    const { userId, month, year, type = 'all' } = req.query; // Default to 'all' if type is not specified
     const { period } = req.params;
 
     if (!userId) {
@@ -212,6 +219,25 @@ router.get('/period/:period', async (req, res) => {
     let startDate = new Date();
     let endDate = new Date();
 
+    if (['month', 'year'].includes(period.toLowerCase()) && (!month || !year)) {
+        return res.json({
+            status: "FAILED",
+            message: "Month and year are required for the specified period"
+        });
+    }
+
+    let monthNum = month;
+    if (month && isNaN(month)) {
+        const monthNumber = getMonthNumber(month);
+        if (monthNumber === null) {
+            return res.json({
+                status: "FAILED",
+                message: "Invalid month specified"
+            });
+        }
+        monthNum = monthNumber + 1; // Convert to 1-based month number
+    }
+
     switch (period.toLowerCase()) {
         case 'day':
             startDate.setHours(0, 0, 0, 0);
@@ -227,20 +253,12 @@ router.get('/period/:period', async (req, res) => {
             endDate.setHours(23, 59, 59, 999);
             break;
         case 'month':
-            startDate.setDate(1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(startDate);
-            endDate.setMonth(startDate.getMonth() + 1);
-            endDate.setDate(0);
-            endDate.setHours(23, 59, 59, 999);
+            startDate = new Date(year, monthNum - 1, 1);
+            endDate = new Date(year, monthNum, 0); // Last day of the specified month
             break;
         case 'year':
-            startDate.setMonth(0, 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(startDate);
-            endDate.setFullYear(startDate.getFullYear() + 1);
-            endDate.setMonth(0, 0);
-            endDate.setHours(23, 59, 59, 999);
+            startDate = new Date(year, 0, 1);
+            endDate = new Date(year, 11, 31, 23, 59, 59, 999);
             break;
         default:
             return res.json({
@@ -249,7 +267,14 @@ router.get('/period/:period', async (req, res) => {
             });
     }
 
-    filter.createdAt = { $gte: startDate, $lte: endDate };
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.json({
+            status: "FAILED",
+            message: "Invalid date parameters"
+        });
+    }
+
+    filter.date = { $gte: startDate, $lte: endDate };
 
     if (type.toLowerCase() !== 'all') {
         filter.type = type.toLowerCase();
@@ -272,10 +297,9 @@ router.get('/period/:period', async (req, res) => {
     }
 });
 
-
 // Route to get total amounts per category within a specific period (day, week, month, year)
 router.get('/category/:period', async (req, res) => {
-    const { userId, type = 'all' } = req.query; // Default to 'all' if type is not specified
+    const { userId, month, year, type = 'all' } = req.query; // Default to 'all' if type is not specified
     const { period } = req.params;
 
     if (!userId) {
@@ -292,6 +316,25 @@ router.get('/category/:period', async (req, res) => {
     let startDate = new Date();
     let endDate = new Date();
 
+    if (['month', 'year'].includes(period.toLowerCase()) && (!month || !year)) {
+        return res.json({
+            status: "FAILED",
+            message: "Month and year are required for the specified period"
+        });
+    }
+
+    let monthNum = month;
+    if (month && isNaN(month)) {
+        const monthNumber = getMonthNumber(month);
+        if (monthNumber === null) {
+            return res.json({
+                status: "FAILED",
+                message: "Invalid month specified"
+            });
+        }
+        monthNum = monthNumber + 1; // Convert to 1-based month number
+    }
+
     switch (period.toLowerCase()) {
         case 'day':
             startDate.setHours(0, 0, 0, 0);
@@ -307,20 +350,12 @@ router.get('/category/:period', async (req, res) => {
             endDate.setHours(23, 59, 59, 999);
             break;
         case 'month':
-            startDate.setDate(1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(startDate);
-            endDate.setMonth(startDate.getMonth() + 1);
-            endDate.setDate(0);
-            endDate.setHours(23, 59, 59, 999);
+            startDate = new Date(year, monthNum - 1, 1);
+            endDate = new Date(year, monthNum, 0); // Last day of the specified month
             break;
         case 'year':
-            startDate.setMonth(0, 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(startDate);
-            endDate.setFullYear(startDate.getFullYear() + 1);
-            endDate.setMonth(0, 0);
-            endDate.setHours(23, 59, 59, 999);
+            startDate = new Date(year, 0, 1);
+            endDate = new Date(year, 11, 31, 23, 59, 59, 999);
             break;
         default:
             return res.json({
@@ -329,25 +364,33 @@ router.get('/category/:period', async (req, res) => {
             });
     }
 
-    filter.createdAt = { $gte: startDate, $lte: endDate };
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.json({
+            status: "FAILED",
+            message: "Invalid date parameters"
+        });
+    }
+
+    filter.date = { $gte: startDate, $lte: endDate };
 
     if (type.toLowerCase() !== 'all') {
         filter.type = type.toLowerCase();
     }
 
     try {
-        const transactions = await Transaction.find(filter);
-        const totalsByCategory = transactions.reduce((acc, transaction) => {
-            if (!acc[transaction.category]) {
-                acc[transaction.category] = 0;
+        const transactions = await Transaction.aggregate([
+            { $match: filter },
+            {
+                $group: {
+                    _id: "$category",
+                    totalAmount: { $sum: "$amount" }
+                }
             }
-            acc[transaction.category] += transaction.amount;
-            return acc;
-        }, {});
+        ]);
 
         res.json({
             status: "SUCCESS",
-            totalsByCategory
+            data: transactions
         });
     } catch (error) {
         res.json({
@@ -358,9 +401,9 @@ router.get('/category/:period', async (req, res) => {
     }
 });
 
-// Route to get total amounts per day for a specific month
+// Route to get total amounts per day for a month
 router.get('/period/month', async (req, res) => {
-    const { userId, month, year, type = 'all' } = req.query;
+    const { userId, month, year, type = 'all' } = req.query; // Default to 'all' if type is not specified
 
     if (!userId || !month || !year) {
         return res.json({
@@ -373,128 +416,42 @@ router.get('/period/month', async (req, res) => {
         userId: new mongoose.Types.ObjectId(userId),
     };
 
-    let startDate = new Date(year, month - 1, 1);
-    let endDate = new Date(year, month, 0); // Last day of the specified month
+    const monthNumber = getMonthNumber(month);
+    if (monthNumber === null) {
+        return res.json({
+            status: "FAILED",
+            message: "Invalid month specified"
+        });
+    }
 
-    filter.createdAt = { $gte: startDate, $lte: endDate };
+    const startDate = new Date(year, monthNumber, 1);
+    const endDate = new Date(year, monthNumber + 1, 0); // Last day of the specified month
+
+    filter.date = { $gte: startDate, $lte: endDate };
 
     if (type.toLowerCase() !== 'all') {
         filter.type = type.toLowerCase();
     }
 
     try {
-        const transactions = await Transaction.find(filter);
-        const totalAmountsPerDay = transactions.reduce((acc, transaction) => {
-            const day = new Date(transaction.createdAt).getDate();
-            if (!acc[day]) {
-                acc[day] = 0;
+        const transactions = await Transaction.aggregate([
+            { $match: filter },
+            {
+                $group: {
+                    _id: { $dayOfMonth: "$date" },
+                    totalAmount: { $sum: "$amount" }
+                }
             }
-            acc[day] += transaction.amount;
-            return acc;
-        }, {});
+        ]);
 
         res.json({
             status: "SUCCESS",
-            totalAmountsPerDay
+            data: transactions
         });
     } catch (error) {
         res.json({
             status: "FAILED",
             message: "An error occurred while retrieving transaction records",
-            error: error.message
-        });
-    }
-});
-
-
-// Updating a Transaction Record by ID
-router.put('/update/:id', async (req, res) => {
-    const { id } = req.params;
-    const { userId, category, amount, note, type } = req.body;
-
-    if (!amount || !category || !userId || !type) {
-        return res.json({
-            status: "FAILED",
-            message: "Empty input fields!"
-        });
-    }
-
-    if (!/^\d+$/.test(amount)) {
-        return res.json({
-            status: "FAILED",
-            message: "Only numbers are accepted for the amount"
-        });
-    }
-
-    if (!['income', 'expense'].includes(type.toLowerCase())) {
-        return res.json({
-            status: "FAILED",
-            message: "Invalid transaction type"
-        });
-    }
-
-    try {
-        const transaction = await Transaction.findById(id);
-        if (!transaction) {
-            return res.json({
-                status: "FAILED",
-                message: "Transaction record not found"
-            });
-        }
-
-        const oldAmount = transaction.amount;
-        const difference = parseInt(amount, 10) - oldAmount;
-
-        // Update the transaction record
-        const updatedTransaction = await Transaction.findByIdAndUpdate(id, {
-            amount: parseInt(amount, 10),
-            category: category,
-            userId: new mongoose.Types.ObjectId(userId),
-            note: note,
-            type: type.toLowerCase()
-        }, { new: true });
-
-        // Update user's balance
-        await updateBalance(userId, difference, type.toLowerCase());
-
-        res.json({
-            status: "SUCCESS",
-            message: "Transaction record updated successfully",
-            data: updatedTransaction
-        });
-    } catch (error) {
-        res.json({
-            status: "FAILED",
-            message: "An error occurred while updating the transaction record"
-        });
-    }
-});
-
-// Deleting a Transaction Record by ID
-router.delete('/delete/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const deletedTransaction = await Transaction.findByIdAndDelete(id);
-        if (!deletedTransaction) {
-            return res.json({
-                status: "FAILED",
-                message: "Transaction record not found"
-            });
-        }
-
-        // Update user's balance
-        await updateBalance(deletedTransaction.userId, -deletedTransaction.amount, deletedTransaction.type);
-
-        res.json({
-            status: "SUCCESS",
-            message: "Transaction record deleted successfully",
-            data: deletedTransaction
-        });
-    } catch (error) {
-        res.json({
-            status: "FAILED",
-            message: "An error occurred while deleting the transaction record",
             error: error.message
         });
     }
