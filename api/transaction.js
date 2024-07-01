@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 // MongoDB models
 const Transaction = require('../models/transaction');
 const Balance = require('../models/balance');
+const Budget = require('../models/budget');
 
 // Middleware to parse JSON bodies
 router.use(express.json());
@@ -36,6 +37,26 @@ async function updateBalance(userId, amount, type) {
         }
     } catch (error) {
         throw new Error("Error updating balance: " + error.message);
+    }
+}
+
+// Helper function to update spentAmount in Budget records
+async function updateBudgetSpentAmount(userId, category, amount) {
+    try {
+        const budgets = await Budget.find({
+            userId: new mongoose.Types.ObjectId(userId),
+            endDate: { $gte: new Date() }, // Check if the budget period is still valid
+            $or: [{ category: category }, { category: 'all' }] // Match category or "all"
+        });
+
+        if (budgets.length > 0) {
+            for (const budget of budgets) {
+                budget.spentAmount += amount;
+                await budget.save();
+            }
+        }
+    } catch (error) {
+        throw new Error("Error updating budget spentAmount: " + error.message);
     }
 }
 
@@ -92,6 +113,11 @@ router.post('/create', async (req, res) => {
 
         // Update user's balance
         await updateBalance(userId, parseInt(amount, 10), type.toLowerCase());
+
+        // Update budget spentAmount if transaction is an expense
+        if (type.toLowerCase() === 'expense') {
+            await updateBudgetSpentAmount(userId, category, parseInt(amount, 10));
+        }
 
         res.json({
             status: "SUCCESS",
@@ -402,9 +428,10 @@ router.get('/category/:period', async (req, res) => {
 });
 
 // Route to get total amounts per day for a month
-router.get('/period/month', async (req, res) => {
-    const { userId, month, year, type = 'all' } = req.query; // Default to 'all' if type is not specified
+router.get('/totals-by-day/:userId/:month/:year/:type', async (req, res) => {
+    const { userId, month, year, type = 'all' } = req.params;
 
+    // Check if required parameters are provided
     if (!userId || !month || !year) {
         return res.json({
             status: "FAILED",
@@ -412,10 +439,12 @@ router.get('/period/month', async (req, res) => {
         });
     }
 
+    // Initialize the filter object
     const filter = {
         userId: new mongoose.Types.ObjectId(userId),
     };
 
+    // Convert month name to month number
     const monthNumber = getMonthNumber(month);
     if (monthNumber === null) {
         return res.json({
@@ -424,16 +453,20 @@ router.get('/period/month', async (req, res) => {
         });
     }
 
-    const startDate = new Date(year, monthNumber, 1);
-    const endDate = new Date(year, monthNumber + 1, 0); // Last day of the specified month
+    // Calculate start and end dates for the specified month
+    const startDate = new Date(year, monthNumber - 1, 1); // Start of the month
+    const endDate = new Date(year, monthNumber, 0); // End of the month (last day)
 
+    // Apply date range to the filter
     filter.date = { $gte: startDate, $lte: endDate };
 
+    // Optionally filter by transaction type
     if (type.toLowerCase() !== 'all') {
         filter.type = type.toLowerCase();
     }
 
     try {
+        // Aggregate transactions to calculate total amount per day
         const transactions = await Transaction.aggregate([
             { $match: filter },
             {
@@ -441,7 +474,8 @@ router.get('/period/month', async (req, res) => {
                     _id: { $dayOfMonth: "$date" },
                     totalAmount: { $sum: "$amount" }
                 }
-            }
+            },
+            { $sort: { "_id": 1 } } // Optionally sort by day of the month
         ]);
 
         res.json({
@@ -449,6 +483,7 @@ router.get('/period/month', async (req, res) => {
             data: transactions
         });
     } catch (error) {
+        console.error("Error retrieving transactions:", error);
         res.json({
             status: "FAILED",
             message: "An error occurred while retrieving transaction records",
@@ -456,5 +491,8 @@ router.get('/period/month', async (req, res) => {
         });
     }
 });
+
+
+
 
 module.exports = router;
