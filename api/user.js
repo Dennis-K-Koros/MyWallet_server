@@ -57,10 +57,9 @@ router.post('/signup', (req,res) =>{
    let {name, email, dateOfBirth, password} = req.body;
    name = name.trim();
    email = email.trim();
-   dateOfBirth = dateOfBirth.trim();
    password = password.trim();
 
-   if(name == "" ||email == "" || dateOfBirth == "" || password == "" ){
+   if(name == "" ||email == "" ||  password == "" ){
         res.json({
             status: "FAILED",
             message: "Empty input fields!"
@@ -74,11 +73,6 @@ router.post('/signup', (req,res) =>{
         res.json({
             status: "FAILED",
             message: "Invalid email entered"
-        });
-   }else if(isNaN(new Date(dateOfBirth).getTime())){
-        res.json({
-            status: "FAILED",
-            message: "Invalid date of Birth entered"
         });
    } else if(password.length<8){
         res.json({
@@ -103,7 +97,6 @@ router.post('/signup', (req,res) =>{
                 const newUser = new User({
                     name,
                     email,
-                    dateOfBirth,
                     password:hashedPassword,
                     verified: false,
                 });
