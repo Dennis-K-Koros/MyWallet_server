@@ -178,6 +178,87 @@ router.get('/:id', (req, res) => {
         });
 });
 
+//updating a specific transaction record
+router.post('/updateTransaction', (req, res) => {
+    let { _id, amount, category, paymentMethod, date, note, type } = req.body;
+    amount = amount.trim();
+    category = category.trim();
+    paymentMethod = paymentMethod.trim();
+    date = date.trim();
+    type = type.trim();
+
+    if (note) {
+        note = note.trim();
+    } else {
+        note = ''; // or null or whatever is appropriate
+    }
+
+    if (amount == "" || !_id || category == "" || paymentMethod == "" || date == "" || type == "") {
+        return res.json({
+            status: "FAILED",
+            message: "Empty input fields!"
+        });
+    } else if (!/^\d+$/.test(amount)) {
+        return res.json({
+            status: "FAILED",
+            message: "Only numbers are accepted"
+        });
+    } else if (isNaN(new Date(date).getTime())) {
+        res.json({
+            status: "FAILED",
+            message: "Invalid date entered"
+        });
+    } else if (!['income', 'expense'].includes(type.toLowerCase())) {
+        return res.json({
+            status: "FAILED",
+            message: "Invalid transaction type"
+        });
+    
+    } else {
+        Transaction.findOneAndUpdate({ _id: _id }, { amount, category, paymentMethod, date, note, type }, { new: true })
+            .then(updatedTransaction => {
+                res.json({
+                    status: "SUCCESS",
+                    message: "Transaction updated successfully",
+                    data: updatedTransaction
+                });
+            })
+            .catch(err => {
+                res.json({
+                    status: "FAILED",
+                    message: "An error occurred while updating Transaction"
+                });
+            });
+    }
+});
+
+// Deleting a specific transaction record 
+router.delete('/delete/:_id', (req, res) => {
+    const { _id } = req.params;
+
+    Transaction.findByIdAndDelete(_id)
+      .then(deletedTransaction => {
+        if (!deletedTransaction) {
+          return res.json({
+            status: "FAILED",
+            message: "Transaction record not found"
+          });
+        }
+        res.json({
+          status: "SUCCESS",
+          message: "Transaction record deleted successfully",
+          data: deletedTransaction
+        });
+      })
+      .catch(error => {
+        res.json({
+          status: "FAILED",
+          message: "An error occurred while deleting the transaction record",
+          error: error.message
+        });
+      });
+  });  
+
 // Reading all Transaction Records for a user and within a specific period
 router.get('/user', (req, res) => {
     const { userId, startDate, endDate } = req.query;
